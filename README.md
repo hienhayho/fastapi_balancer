@@ -144,7 +144,7 @@ balancer = Balancer(
     )
 )
 
-balancer.wrap(app, endpoints=["/predict"])
+balancer.wrap(app)
 ```
 
 That is all. On startup the balancer probes `/predict`, stores its capacity, and begins enforcing the limit on every incoming request.
@@ -164,7 +164,7 @@ from fastapi_balancer.models import EndpointProbeConfig
 balancer = Balancer(
     config=BalancerConfig(
         storage="redis://localhost:6379",
-        strategy="round-robin",
+        routing_strategy=RoutingStrategy.ROUND_ROBIN,
         probe_on_startup=True,
         queue_timeout=60.0,
         latency_threshold_ms=10000,
@@ -183,7 +183,7 @@ balancer = Balancer(
     )
 )
 
-balancer.wrap(app, endpoints=["/ai_score"])
+balancer.wrap(app)
 ```
 
 ### YAML Config
@@ -192,7 +192,7 @@ Load config from a YAML file:
 
 ```python
 balancer = Balancer(config="balancer.yml")
-balancer.wrap(app, endpoints=["/predict", "/embed"])
+balancer.wrap(app)
 ```
 
 Example `balancer.yml`:
@@ -254,7 +254,7 @@ endpoints:
 ### Multiple Endpoints
 
 ```python
-balancer.wrap(app, endpoints=["/predict", "/embed", "/health"])
+balancer.wrap(app)
 ```
 
 Each endpoint is probed and rate-limited independently. Pass only the endpoints you want the balancer to watch — all other routes pass through unaffected.

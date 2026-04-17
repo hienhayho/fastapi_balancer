@@ -1,7 +1,8 @@
 import itertools
 from abc import ABC, abstractmethod
 
-from .storage.base import AbstractStorage
+from fastapi_balancer.models import RoutingStrategy
+from fastapi_balancer.storage.base import AbstractStorage
 
 
 class AbstractRouter(ABC):
@@ -51,9 +52,9 @@ class WeightedRouter(AbstractRouter):
         return max(scores, key=lambda x: x[0])[1]
 
 
-def get_router(strategy: str, storage: AbstractStorage) -> AbstractRouter:
-    if strategy == "least-connections":
+def get_router(strategy: RoutingStrategy, storage: AbstractStorage) -> AbstractRouter:
+    if strategy == RoutingStrategy.LEAST_CONNECTIONS:
         return LeastConnectionsRouter(storage)
-    if strategy == "weighted":
+    if strategy == RoutingStrategy.WEIGHTED:
         return WeightedRouter(storage)
     return RoundRobinRouter()

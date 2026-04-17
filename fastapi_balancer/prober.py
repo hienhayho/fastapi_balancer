@@ -8,8 +8,8 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-from .models import EndpointProbeConfig, ProbeResult
-from .storage.base import AbstractStorage
+from fastapi_balancer.models import EndpointProbeConfig, ProbeResult
+from fastapi_balancer.storage.base import AbstractStorage
 
 
 class Prober:

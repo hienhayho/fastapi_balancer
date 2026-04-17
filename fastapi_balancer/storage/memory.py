@@ -1,5 +1,5 @@
 import asyncio
-from .base import AbstractStorage
+from fastapi_balancer.storage.base import AbstractStorage
 
 
 class MemoryStorage(AbstractStorage):

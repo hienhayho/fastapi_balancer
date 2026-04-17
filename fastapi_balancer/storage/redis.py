@@ -1,6 +1,6 @@
 from redis.asyncio import Redis, ConnectionPool
 
-from .base import AbstractStorage
+from fastapi_balancer.storage.base import AbstractStorage
 
 
 class RedisStorage(AbstractStorage):

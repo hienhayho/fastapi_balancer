@@ -1,5 +1,7 @@
-storage: null                   # or "redis://localhost:6379"
-strategy: round-robin           # round-robin | least-connections | weighted
+storage:
+  type: memory                  # memory | redis
+  # url: redis://localhost:6379 # required when type: redis
+routing_strategy: round-robin   # round-robin | least-connections | weighted
 health_endpoint: /health
 health_check_interval: 10       # seconds
 queue_timeout: 30               # seconds — timeout if request waits longer than this
@@ -8,13 +10,17 @@ force_reprobe: false            # set true to ignore cached Redis capacity and r
 error_threshold: 0.05           # stop probing when error rate exceeds 5%
 latency_threshold_ms: 2000      # stop probing when p99 latency exceeds 2000ms
 
-ui_username: admin              # optional — remove to disable UI auth
-ui_password: secret
+ui:
+  enable: true                  # set false to disable the dashboard entirely
+  path: /balancer/ui            # mount path for the dashboard
+  username: admin               # optional — remove to disable UI auth
+  password: secret
 
 endpoints:
   /predict:
     method: POST
     capacity: 10                # optional — if set, skips probing and uses this value directly
+    queue_timeout: 60           # optional — overrides global queue_timeout for this endpoint
     headers:
       Content-Type: application/json
       Authorization: Bearer your-token-here

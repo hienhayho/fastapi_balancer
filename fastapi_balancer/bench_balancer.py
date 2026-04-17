@@ -5,10 +5,10 @@ from pathlib import Path
 import httpx
 import yaml
 
-from .config import BalancerConfig
-from .models import EndpointProbeConfig
-from .prober import Prober
-from .storage.memory import MemoryStorage
+from fastapi_balancer.config import BalancerConfig
+from fastapi_balancer.models import EndpointProbeConfig, RoutingStrategy, StorageConfig, StorageType, UIConfig
+from fastapi_balancer.prober import Prober
+from fastapi_balancer.storage.memory import MemoryStorage
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class BenchBalancer:
                     )
                 },
                 latency_threshold_ms=80000,
-                storage="redis://localhost:6379",
+                storage=StorageConfig(type=StorageType.REDIS, url="redis://localhost:6379"),
             ).run("balancer.yml")
         )
     """
@@ -39,8 +39,8 @@ class BenchBalancer:
         self,
         base_url: str,
         endpoints: dict[str, EndpointProbeConfig],
-        storage: str | None = None,
-        strategy: str = "round-robin",
+        storage: StorageConfig | None = None,
+        routing_strategy: RoutingStrategy = RoutingStrategy.ROUND_ROBIN,
         health_endpoint: str = "/health",
         health_check_interval: int = 10,
         queue_timeout: float = 30.0,
@@ -48,13 +48,12 @@ class BenchBalancer:
         force_reprobe: bool = False,
         error_threshold: float = 0.05,
         latency_threshold_ms: float = 2000.0,
-        ui_username: str | None = None,
-        ui_password: str | None = None,
+        ui: UIConfig | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._endpoints = endpoints
-        self._storage = storage
-        self._strategy = strategy
+        self._storage = storage or StorageConfig()
+        self._routing_strategy = routing_strategy
         self._health_endpoint = health_endpoint
         self._health_check_interval = health_check_interval
         self._queue_timeout = queue_timeout
@@ -62,13 +61,12 @@ class BenchBalancer:
         self._force_reprobe = force_reprobe
         self._error_threshold = error_threshold
         self._latency_threshold_ms = latency_threshold_ms
-        self._ui_username = ui_username
-        self._ui_password = ui_password
+        self._ui = ui or UIConfig()
 
     def build(self) -> BalancerConfig:
         return BalancerConfig(
             storage=self._storage,
-            strategy=self._strategy,
+            routing_strategy=self._routing_strategy,
             health_endpoint=self._health_endpoint,
             health_check_interval=self._health_check_interval,
             queue_timeout=self._queue_timeout,
@@ -76,8 +74,7 @@ class BenchBalancer:
             force_reprobe=self._force_reprobe,
             error_threshold=self._error_threshold,
             latency_threshold_ms=self._latency_threshold_ms,
-            ui_username=self._ui_username,
-            ui_password=self._ui_password,
+            ui=self._ui,
             endpoints=self._endpoints,
         )
 
@@ -104,7 +101,6 @@ class BenchBalancer:
                     "[bench] %s → max_concurrency=%d p99=%.0fms rps=%.1f",
                     path, result.max_concurrency, result.p99_latency_ms, result.rps,
                 )
-                # store measured capacity back into the endpoint config
                 self._endpoints[path] = probe_cfg.model_copy(
                     update={"capacity": result.max_concurrency}
                 )
@@ -115,8 +111,11 @@ class BenchBalancer:
         """Export config to YAML without probing."""
         cfg = self.build()
         data: dict = {
-            "storage": cfg.storage,
-            "strategy": cfg.strategy,
+            "storage": {
+                "type": cfg.storage.type.value,
+                **({"url": cfg.storage.url} if cfg.storage.url else {}),
+            },
+            "routing_strategy": cfg.routing_strategy.value,
             "health_endpoint": cfg.health_endpoint,
             "health_check_interval": cfg.health_check_interval,
             "queue_timeout": cfg.queue_timeout,
@@ -124,16 +123,18 @@ class BenchBalancer:
             "force_reprobe": cfg.force_reprobe,
             "error_threshold": cfg.error_threshold,
             "latency_threshold_ms": cfg.latency_threshold_ms,
+            "ui": {
+                "enable": cfg.ui.enable,
+                **({"username": cfg.ui.username} if cfg.ui.username else {}),
+                **({"password": cfg.ui.password} if cfg.ui.password else {}),
+            },
         }
-        if cfg.ui_username:
-            data["ui_username"] = cfg.ui_username
-        if cfg.ui_password:
-            data["ui_password"] = cfg.ui_password
         if cfg.endpoints:
             data["endpoints"] = {
                 ep: {
                     "method": pc.method,
                     **({"capacity": pc.capacity} if pc.capacity is not None else {}),
+                    **({"queue_timeout": pc.queue_timeout} if pc.queue_timeout is not None else {}),
                     **({"headers": dict(pc.headers)} if pc.headers else {}),
                     **({"body": pc.body} if pc.body is not None else {}),
                 }

@@ -24,9 +24,12 @@ def make_app():
 
 async def test_non_watched_endpoint_passes_through():
     app = make_app()
-    cfg = BalancerConfig(probe_on_startup=False)
+    cfg = BalancerConfig(
+        probe_on_startup=False,
+        endpoints={"/predict": EndpointProbeConfig(method="POST")},
+    )
     balancer = Balancer(config=cfg)
-    balancer.wrap(app, endpoints=["/predict"])
+    balancer.wrap(app)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get("/health")
@@ -34,18 +37,9 @@ async def test_non_watched_endpoint_passes_through():
 
 
 async def test_watched_endpoint_admitted():
-    app = make_app()
-    cfg = BalancerConfig(
-        probe_on_startup=False,
-        endpoints={"/predict": EndpointProbeConfig(method="POST")},
-    )
-    balancer = Balancer(config=cfg)
-    balancer.wrap(app, endpoints=["/predict"])
-
-    # manually set capacity so middleware admits
-    from fastapi_balancer.storage.memory import MemoryStorage
     # re-wrap with known storage
     app2 = make_app()
+    from fastapi_balancer.storage.memory import MemoryStorage
     storage = MemoryStorage()
     await storage.set_capacity("/predict", 10)
 
@@ -72,9 +66,12 @@ async def test_watched_endpoint_admitted():
 
 async def test_stats_endpoint():
     app = make_app()
-    cfg = BalancerConfig(probe_on_startup=False)
+    cfg = BalancerConfig(
+        probe_on_startup=False,
+        endpoints={"/predict": EndpointProbeConfig(method="POST")},
+    )
     balancer = Balancer(config=cfg)
-    balancer.wrap(app, endpoints=["/predict"])
+    balancer.wrap(app)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get("/balancer/stats")

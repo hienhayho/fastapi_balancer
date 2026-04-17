@@ -4,7 +4,7 @@ from typing import Any
 
 import httpx
 
-from .storage.base import AbstractStorage
+from fastapi_balancer.storage.base import AbstractStorage
 
 logger = logging.getLogger(__name__)
 

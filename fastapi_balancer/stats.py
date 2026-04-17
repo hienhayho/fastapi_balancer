@@ -1,4 +1,4 @@
-from .storage.base import AbstractStorage
+from fastapi_balancer.storage.base import AbstractStorage
 
 
 async def get_stats(storage: AbstractStorage, endpoints: list[str]) -> dict:

@@ -27,9 +27,10 @@ async def test_all_requests_handled_under_load():
     cfg = BalancerConfig(
         probe_on_startup=False,
         queue_timeout=10.0,
+        endpoints={"/predict": EndpointProbeConfig(method="POST")},
     )
     balancer = Balancer(config=cfg)
-    balancer.wrap(app, endpoints=["/predict"])
+    balancer.wrap(app)
 
     # manually set capacity
     from fastapi_balancer.storage.memory import MemoryStorage
